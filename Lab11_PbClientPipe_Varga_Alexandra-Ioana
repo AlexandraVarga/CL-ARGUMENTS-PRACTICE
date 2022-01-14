@@ -1,0 +1,108 @@
+/*
+
+Autor: Alexandra-Ioana Varga
+Problema 1, Laborator 11 - cu pipe-uri
+Data ultimei modificari: 12.05.2021
+Stadiu: Rezolvata - nu stiu daca am satisfacut cerinta ??? - relatie fiu-parinte :(
+
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+#define MAXLINE 20
+
+///functie cu care parsez argumentele comenzilor linux separate prin spatiu
+void parsareArgumente(char *buf, char bufArg[MAXLINE][MAXLINE], int *cnt)
+{
+    char *pc = strtok(buf, " ");
+    while (pc)
+    {
+        strcpy(bufArg[(*cnt)++], pc); ///salvez in acest buffer argumentele parsate
+        pc = strtok(NULL, " ");
+    }
+}
+///functie afisare argumente comanda linux
+void executareArgumente(char bufArg[MAXLINE][MAXLINE], int cnt)
+{
+
+    char *args[cnt]; ///pun argumentele comenzilor
+
+    args[0] = "./serverPipe"; ///nume executabil server
+
+    for (int i = 0; i < cnt; i++)
+    {
+        args[i + 1] = bufArg[i]; ///le preiau din buffer argumentele pentru operatie
+    }
+    args[cnt + 2] = NULL;
+
+    execlp(args[0], "serverPipe", args[1], args[2], args[3]);
+
+}
+int main(void)
+{
+    char buf[MAXLINE];             ///buffer in care citesc comanda de la tastatura
+    char bufArg[MAXLINE][MAXLINE]; ///buffer cu argumente comanda linux
+    int cnt = 0;                   ///contor numar de argumente
+    pid_t p, pAsincron;            ///proces ce vreau sa il declansez
+    int status;                    ///status-ul pocesului
+    int ok = 0;
+   
+    ///resetare buffer la NULL
+    for (int i = 0; i < MAXLINE; i++)
+    {
+        for (int j = 0; j < strlen(bufArg[i]); j++)
+        {
+            bufArg[i][j] = NULL;
+        }
+    }
+    printf("> ");
+    while (fgets(buf, MAXLINE, stdin) != NULL) ///citesc de la tastatura in buffer
+    {
+        buf[strlen(buf) - 1] = 0;            ///ignoram endline-ul
+        parsareArgumente(buf, bufArg, &cnt); ///parsez argumentele delimitate prin spatiu
+
+        if ((p = fork()) < 0) ///nu am putut crea procesul copil
+        {
+            perror("Eroare fork");
+            exit(1);
+        }
+        if (p == 0) ///am creat procesul copil cu succes
+        {
+            executareArgumente(bufArg, cnt); ///execut comanda linux parsata
+            perror("Eroare exec");
+            exit(2);
+        }
+        else
+        {
+            //pentru parinte alta comanda
+            printf("> ");
+            wait(NULL);
+        }
+        ///resetare buffere utilizate
+        memset(buf, 0, 100);
+        cnt = 0;
+        for (int i = 0; i < MAXLINE; i++)
+        {
+            for (int j = 0; j < strlen(bufArg[i]); j++)
+            {
+                bufArg[i][j] = NULL;
+            }
+        }
+        ///resetare buffer
+        memset(buf, 0, 100);
+        cnt = 0;
+        for (int i = 0; i < MAXLINE; i++)
+        {
+            for (int j = 0; j < strlen(bufArg[i]); j++)
+            {
+                bufArg[i][j] = NULL;
+            }
+        }
+    }
+
+    exit(0);
+}
